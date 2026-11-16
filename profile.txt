@@ -17,6 +17,8 @@ Education: Master Marketing Intelligence
 email=fauserme@hs-pforzheim.de
 linkedin=www.linkedin.com/in/melanie-fauser-b64133257
 
+about= Melanie earned her Bachelor of Science in Marketingkommunikation und Werbung from Hochschule Pforzheim, and her Master Marketing Intelligence at Hochschule Pforzheim in 2027 as well.
+
 phone=+4915738967432
 
 location=Stuttgart, Deutschland
