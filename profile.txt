@@ -10,8 +10,6 @@ title1=M.Sc.Master Marketing Intelligence
 
 title2=B.Sc. Bachelor Marketingkommunikation und Werbung
 
-expertise=Internet Marketing, AI Applications, Agentic AI
-
 email=fauserme@hs-pforzheim.de
 linkedin=www.linkedin.com/in/melanie-fauser-b64133257
 
