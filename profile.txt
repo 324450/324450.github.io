@@ -6,22 +6,15 @@
 
 name=Melanie Fauser
 
-title1=Top 2% Scientist Worldwide (2020-2026)
+title1=M.Sc.Master Marketing Intelligence
 
-title2=2024 National Teaching Award Laureate
+title2=B.Sc. Bachelor Marketingkommunikation und Werbung
 
 expertise=Internet Marketing, AI Applications, Agentic AI
-
-education=Ph.D. in Industrial Engineering, University of Wisconsin-Madison, USA
 
 email=fauserme@hs-pforzheim.de
 linkedin=www.linkedin.com/in/melanie-fauser-b64133257
 
-about1=Prof. Luarn earned his B.S. in Industrial Engineering from Tunghai University,
-about2=and his M.S. and Ph.D. in Industrial Engineering from the University of Wisconsin-Madison.
-about3=Named among the world's top 2% scientists by Stanford University & Elsevier for seven consecutive years (2020-2026).
-about4=Recipient of the 2024 Presidential National Teaching Award, Taiwan
-
 phone=+4915738967432
 
-location=T2-409, National Taiwan University of Science and Technology, No. 43, Sec. 4, Keelung Rd., Taipei, Taiwan
+location=Stuttgart, Deutschland
