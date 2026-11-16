@@ -7,12 +7,10 @@
 name=Melanie Fauser
 
 title1=M.Sc.Master Marketing Intelligence
-
 title2=B.Sc. Bachelor Marketingkommunikation und Werbung
 
-Expertise: Digital Marketing, Marketing Strategy, Process Automation
-
-Education: Master Marketing Intelligence
+Expertise:Digital Marketing, Marketing Strategy, Process Automation
+Education:Master Marketing Intelligence
 
 email=fauserme@hs-pforzheim.de
 linkedin=www.linkedin.com/in/melanie-fauser-b64133257
