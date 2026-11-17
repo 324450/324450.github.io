@@ -14,7 +14,7 @@ expertise=Digital Marketing, Marketing Strategy, Process Automation
 education=Master Marketing Intelligence
 
 email=fauserme@hs-pforzheim.de
-linkedin=www.linkedin.com/in/melanie-fauser-b64133257
+linkedin=https://www.linkedin.com/in/melanie-fauser-b64133257
 
 about1=My name is Melanie. I hold a Bachelor's degree in Marketing Communication and Advertising from Pforzheim University and am currently pursuing a Master's degree in Marketing Intelligence at the same university. Alongside my studies, I work as a working student in Strategic Communication & Process Automation at Mercedes-Benz Tech Innovation. I’m a big coffee lover. A good cup of coffee is always the perfect way to start my day! 
 about2=
