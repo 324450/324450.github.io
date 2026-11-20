@@ -1,28 +1,49 @@
-# QA Report: AuraVision G1 Web Prototype
+# QA-Prüfbericht
 
-## 🔴 Must Fix
-* **None identified**: The static single-page prototype is syntactically sound, completely self-contained with no broken external assets, and strictly adheres to the strategic positioning and marketing copy.
+**Geprüft:** `04-prototype/index.html`
+**Abgeglichen mit:** `02-strategy.md`, `03-copywriting.md` (für die Bitkom-Zahl zusätzlich `01-research.md`)
+**Hinweis:** „KLARBLICK“ ist der vom CEO festgelegte Arbeitsname und wird nicht als Fehler gewertet.
 
-## 🟡 Recommended Fixes
-1. **Interactive Demo Action for Pre-Order Buttons**:
-   * *Location*: `<a href="#preorder" class="btn-primary">` in the Hero and CTA sections.
-   * *Observation*: The anchor jumps directly to `#preorder`, which works cleanly for a static demo, but adding an accessible form input or demo modal in future iterations would further enrich the user experience.
-2. **Table Accessibility Attributes**:
-   * *Location*: `<table class="comparison">`
-   * *Observation*: While visually clean and responsive via `overflow-x: auto`, adding `scope="col"` to `<th>` tags will ensure adherence to strict German and EU digital accessibility standards (BFSG / European Accessibility Act).
+---
 
-## 🟢 Passed Items
-* **Semantic HTML Structure**: Proper usage of `<header>`, `<main>`, `<section>`, `<footer>`, semantic heading hierarchy (`<h1>` through `<h4>`), and clean navigation inner containers.
-* **Content Fidelity & Strategic Alignment**:
-  * The Slogan (*"Intelligence in Plain Sight. Zero Privacy Compromise."*) matches `03-copywriting.md` verbatim.
-  * All four core value propositions (Camera-Free/Works Council compliance, Micro-LED Waveguide display, Real-time translation, and Master optician prescription integration) are faithfully represented without exaggeration or drift.
-  * The €549 price point accurately reflects the target range (€499–€699) defined in `02-strategy.md`.
-* **Zero External Dependencies**:
-  * Embedded `<style>` with native system font stack (`-apple-system, Segoe UI, Roboto`).
-  * No remote web fonts, CDN scripts, or external image links—guaranteeing rapid loading and zero GDPR data transfer leakage to third parties.
-* **Responsive Design**:
-  * Viewport meta tag properly declared.
-  * Mobile media query (`@media (max-width: 768px)`) smoothly shifts multi-column grids (specs bar and feature cards) into single/double column layouts suitable for handheld devices.
+## 🔴 Muss korrigiert werden
 
-## Conclusion: Ready to Deliver?
-**YES (🟢 READY TO DELIVER)**. The web prototype in `projects/smart-glasses-de/04-prototype/index.html` fully satisfies all functional demo criteria, matches the copy and positioning documents, and contains zero blocking issues.
+Keine Befunde. Es gibt keine Syntaxfehler, keine inhaltlichen Widersprüche zu Strategie oder Texten und keine vergessenen Platzhalter.
+
+---
+
+## 🟡 Sollte korrigiert werden
+
+1. **Die CTA-Buttons im Abschnitt `<section class="cta" id="termin">` verweisen auf sich selbst.** Beide Buttons (`href="#termin"`) liegen innerhalb von `#termin`, ein Klick bewirkt also nichts.
+   *Vorschlag:* Eigene Ziele wie `#buchung` und `#vorbestellen` mit Platzhalter-Abschnitt oder Dummy-Formular (PLZ-Feld plus Button) anlegen.
+2. **Die Kopfzeile kann auf schmalen Handys (ca. 320–360 px) eng werden.** `.topbar .container` hat kein `gap` und kein `flex-wrap`, Logo und Link stoßen aneinander.
+   *Vorschlag:* `gap: 1rem;` ergänzen und unter 480 px den Linktext kürzen („Termin buchen“).
+3. **Die Formulierung im Hero-Satz zur Bitkom-Zahl ist etwas zu weit gefasst.** „76 % der Deutschen“ verallgemeinert die Grundgesamtheit.
+   *Vorschlag:* „76 % der Befragten in Deutschland“. Der Satz „KLARBLICK hat deshalb gar keine Kamera.“ betont den Verzicht. Nutzenorientierter wäre: „… keine Kamera – Sie können sie überall tragen.“
+4. **Ein Versprechen ohne Link** (Karte 04): „Datenschutz-Dokumentation öffentlich einsehbar“, aber auf der Seite gibt es keinen Link dorthin.
+   *Vorschlag:* Einen Platzhalter-Link „Datenschutz-Dokumentation ansehen“ ergänzen.
+5. **Im Footer fehlen Impressum und Datenschutzerklärung.** Für einen Livegang in Deutschland sind beide Pflicht.
+   *Vorschlag:* Platzhalter-Links anlegen.
+6. **Du/Sie-Wechsel:** Der Slogan duzt („für dich“), der übrige Text siezt.
+   *Vorschlag:* Mit dem Copywriter klären.
+7. **Barrierefreiheit beim Fußnoten-Link:** Ein Screenreader liest nur „1“ vor.
+   *Vorschlag:* `aria-label="Quelle 1"` ergänzen.
+
+---
+
+## 🟢 Bestandene Punkte
+
+- **HTML-Syntax:** korrekt und semantisch (header/main/section/article/footer), `lang="de"`, saubere Überschriften-Hierarchie.
+- **Textübernahme:** wortgleich mit `03-copywriting.md`, kein Platzhalter übrig geblieben.
+- **Copywriter-Hinweise eingehalten:** kein Preis, kein Prüfsiegel, keine Live-Untertitel, Bitkom-Zahl mit Quelle und Jahr.
+- **Positionierung:** alle Strategie-Kernpunkte abgebildet, keine Widersprüche.
+- **CTA:** klare Hauptaktion (Beratungstermin), die dreimal erscheint und sich deutlich von der sekundären Aktion abhebt.
+- **Responsive Layout:** Grid wechselt bei 760 px, Buttons umbrechen sauber, Typografie mit `clamp()`.
+- **Kontrast:** etwa 5:1, erfüllt WCAG AA.
+- **Transparenz:** Demo-Hinweis und Arbeitsname im Footer gekennzeichnet.
+
+---
+
+## Fazit: Lieferfähig?
+
+**Ja, als Prototyp lieferfähig.** Es gibt keine 🔴-Befunde. Vor einer Präsentation sollten die Punkte 1 und 2 behoben werden, vor einem echten Livegang zusätzlich die Punkte 4 und 5.

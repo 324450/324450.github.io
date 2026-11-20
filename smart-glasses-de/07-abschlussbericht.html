@@ -1,0 +1,137 @@
+<title>KLARBLICK Projektbericht</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: ruhige Berichtsspalte, oben Kernaussage + Positionierung, darunter Phasenleiste, Stärken/Schwächen, priorisierte Schritte */
+:root {
+  --bg: #f5f7f8; --surface: #ffffff; --fg: #17232a; --muted: #5a6a73; --line: #dbe3e7;
+  --accent: #1f7a8c; --accent-soft: #e2f0f2; --good: #2e7d4f; --good-soft: #e5f3ea; --warn: #a86a00; --warn-soft: #fbf0dc; --bad: #b3382c; --bad-soft: #f9e4e1;
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171b; --surface: #16222838; --surface: #162228; --fg: #e3ecef; --muted: #93a6ae; --line: #26363e;
+  --accent: #5cc3d6; --accent-soft: #163a42; --good: #6fcf97; --good-soft: #17352a; --warn: #f0b252; --warn-soft: #3a2c14; --bad: #f08a7e; --bad-soft: #3d1f1b; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f171b; --surface: #162228; --fg: #e3ecef; --muted: #93a6ae; --line: #26363e;
+  --accent: #5cc3d6; --accent-soft: #163a42; --good: #6fcf97; --good-soft: #17352a; --warn: #f0b252; --warn-soft: #3a2c14; --bad: #f08a7e; --bad-soft: #3d1f1b; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px }
+.wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 48px }
+h1, h2, h3 { font-family: var(--display); line-height: 1.2; text-wrap: balance; margin: 0 }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -0.01em }
+h2 { font-size: 1.45rem; margin-bottom: 16px }
+h3 { font-size: 1.05rem }
+p { margin: 0 }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent) }
+header { display: grid; gap: 14px }
+.meta { color: var(--muted); font-size: 0.92rem }
+.lead { font-size: 1.12rem; max-width: 65ch }
+.position { background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 18px 20px; border-radius: 0 8px 8px 0; display: grid; gap: 6px }
+.position q { font-family: var(--display); font-size: 1.15rem; quotes: "„" "“" }
+.slogan { font-family: var(--display); font-weight: 700; font-size: 1.4rem; color: var(--accent) }
+.verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px }
+.chip { padding: 14px 16px; border-radius: 8px; display: grid; gap: 4px; min-width: 0 }
+.chip b { font-family: var(--display) }
+.chip.good { background: var(--good-soft); color: var(--fg) } .chip.good b { color: var(--good) }
+.chip.bad { background: var(--bad-soft); color: var(--fg) } .chip.bad b { color: var(--bad) }
+.phases { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden }
+.phase { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; padding: 14px 16px; border-top: 1px solid var(--line); align-items: start }
+.phase:first-child { border-top: 0 }
+.phase .num { font-family: var(--mono); color: var(--muted); font-size: 0.9rem; padding-top: 2px }
+.phase > div { min-width: 0; display: grid; gap: 2px }
+.phase small { color: var(--muted); font-size: 0.9rem }
+.pill { font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap }
+.pill.ok { background: var(--good-soft); color: var(--good) }
+.pill.warn { background: var(--warn-soft); color: var(--warn) }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px }
+@media (max-width: 720px) { .cols { grid-template-columns: 1fr } .phase { grid-template-columns: 40px 1fr } .phase .pill { grid-column: 2; justify-self: start } }
+ul.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px }
+ul.list li { display: grid; gap: 2px; padding-left: 14px; border-left: 2px solid var(--line) }
+ul.list li b { font-weight: 600 }
+ul.list li span { color: var(--muted); font-size: 0.93rem }
+.good-list li { border-color: var(--good) } .bad-list li { border-color: var(--bad) }
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 10px }
+ol.steps li { counter-increment: s; display: grid; grid-template-columns: 36px 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px }
+ol.steps li::before { content: counter(s); font-family: var(--display); font-weight: 700; font-size: 1.2rem; color: var(--accent) }
+ol.steps li div { min-width: 0; display: grid; gap: 2px }
+ol.steps li span { color: var(--muted); font-size: 0.93rem }
+.files { font-family: var(--mono); font-size: 0.85rem; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; color: var(--muted); line-height: 1.8 }
+footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 16px }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Venture Team · Abschlussbericht · Smart Glasses DE</span>
+    <h1>KLARBLICK: die Display-Brille ohne Kamera</h1>
+    <p class="meta">Stand 20.11.2026 · Arbeitsname, Markenrecht ungeprüft · Erstellt von sechs Agents</p>
+    <p class="lead">Das Team hat eine durchgängige Kette erarbeitet: Marktanalyse, Positionierung, Texte, Landingpage und Prüfung. Die Linie trägt ohne Bruch von der Recherche bis zur Webseite. Für eine Investitionsentscheidung fehlt aber noch das Fundament: Machbarkeit, Kosten und eine belastbare Abgrenzung zu Even Realities.</p>
+  </header>
+
+  <section class="position">
+    <span class="eyebrow">Positionierung</span>
+    <q>Die Display-Brille ohne Kamera für berufstätige Brillenträger: Notizen, Übersetzung, Teleprompter und Navigation im Blickfeld, mit Gleitsicht und Service beim Optiker vor Ort und Datenverarbeitung in der EU.</q>
+    <span class="slogan">Sieht alles für dich. Filmt niemanden.</span>
+  </section>
+
+  <section class="verdict">
+    <div class="chip good"><b>Als Konzept überzeugend</b>Schlüssige Strategie, gut belegt (32 Quellen), ehrlicher Umgang mit Datenlücken.</div>
+    <div class="chip bad"><b>Noch nicht investitionsreif</b>Kein Weg zum fertigen Produkt, Zeitplan bis Juni 2027 vermutlich unrealistisch.</div>
+  </section>
+
+  <section>
+    <h2>Die Phasen</h2>
+    <div class="phases">
+      <div class="phase"><span class="num">01</span><div><b>Marktforschung</b><small>Markt +139 % im 2. Halbjahr 2025, Meta mit 82 % Anteil. Datenschutz als größtes Risiko in DE. Absatzzahlen für Deutschland fehlen.</small></div><span class="pill ok">fertig</span></div>
+      <div class="phase"><span class="num">02</span><div><b>Strategie</b><small>Kamerafreiheit als Argument, Vertrieb über unabhängige Optiker, Pilot 2027. Schwach bei Kosten, Preis und Machbarkeit.</small></div><span class="pill ok">fertig</span></div>
+      <div class="phase"><span class="num">03</span><div><b>Texte</b><small>Slogan, Landingpage-Texte, 8 Präsentationsaussagen. Einige Zusagen im Präsens, Du/Sie-Bruch im Slogan.</small></div><span class="pill ok">fertig</span></div>
+      <div class="phase"><span class="num">04</span><div><b>Landingpage-Prototyp</b><small>Responsive Einzelseite ohne Abhängigkeiten. Buttons im Bereich Terminbuchung noch ohne Funktion.</small></div><span class="pill warn">Demo</span></div>
+      <div class="phase"><span class="num">05</span><div><b>QA-Prüfung</b><small>Keine roten, sieben gelbe Befunde. Daher keine Korrekturschleife, alle gelben Punkte sind offen.</small></div><span class="pill warn">7 offen</span></div>
+    </div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>Stärken</h2>
+      <ul class="list good-list">
+        <li><b>Durchgängige Linie</b><span>Strategie folgt direkt aus den Belegen, die Webseite übernimmt die Texte fast wortgleich.</span></li>
+        <li><b>Ehrlich mit Unsicherheit</b><span>Belege, Annahmen und Lücken sind konsequent getrennt.</span></li>
+        <li><b>Kluge Grundentscheidung</b><span>Ohne Kamera weniger Rechtsrisiko und ein Argument für Arbeitgeber und Betriebsräte.</span></li>
+        <li><b>Disziplin bei den Texten</b><span>Preis, Prüfsiegel und Untertitel bewusst weggelassen.</span></li>
+        <li><b>Realistischer Vertriebsansatz</b><span>Go/No-Go mit mindestens 10 Optiker-Zusagen vor dem Pilot.</span></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Schwächen</h2>
+      <ul class="list bad-list">
+        <li><b>Abgrenzung zu Even Realities trägt nicht</b><span>Even Realities bietet Gleitsicht über Partner-Optiker bereits an.</span></li>
+        <li><b>Kein Weg zum Produkt</b><span>Hardware, Displays, Herstellkosten und Fertigungspartner sind ungeklärt.</span></li>
+        <li><b>Überversprechen auf der Webseite</b><span>Zusagen im Präsens, die es noch nicht gibt, und eine zu weit gefasste Garantie.</span></li>
+        <li><b>Bedienung passt nicht zum Einsatz</b><span>Sprachsteuerung im Meeting ist heikel, stille Bedienung fehlt.</span></li>
+        <li><b>Optiker fehlen auf der Webseite</b><span>Kein Bereich „Partner-Optiker werden“, kein Produktbild.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Nächste Schritte nach Priorität</h2>
+    <ol class="steps">
+      <li><div><b>Machbarkeit klären</b><span>Eigenentwicklung oder Fertigungspartner, Herstellkosten, Bedienkonzept. Danach Zeitplan neu planen.</span></div></li>
+      <li><div><b>Abgrenzung schärfen</b><span>Even Realities in DACH analysieren und einen schwer kopierbaren Vorteil finden, etwa Exklusivverträge mit Optiker-Verbünden.</span></div></li>
+      <li><div><b>Rechtliches klären</b><span>Medizinprodukterecht der Korrekturgläser, CE-Weg, Markenrecherche bei DPMA und EUIPO.</span></div></li>
+      <li><div><b>Webseiten-Aussagen absichern</b><span>Unbelegte Zusagen ins Futur setzen, Garantie korrigieren, einheitlich siezen, Slogan testen.</span></div></li>
+      <li><div><b>Prototyp fertigstellen</b><span>Gelbe QA-Punkte beheben, Produktbild und Bereich für Optiker ergänzen.</span></div></li>
+      <li><div><b>Datenlücken schließen</b><span>Marktdaten kaufen, 10–15 Optiker-Interviews, Preisstudie für 419–899 €.</span></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Dateien</h2>
+    <div class="files">projects\smart-glasses-de\01-research.md<br>projects\smart-glasses-de\02-strategy.md<br>projects\smart-glasses-de\03-copywriting.md<br>projects\smart-glasses-de\04-prototype\index.html<br>projects\smart-glasses-de\05-qa-report.md<br>projects\smart-glasses-de\06-final-review.md</div>
+  </section>
+
+  <footer>Lehrbeispiel für Multi-Agent-Zusammenarbeit. Kein kommerziell geprüftes Ergebnis.</footer>
+</div>
