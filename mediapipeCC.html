@@ -1,578 +1,470 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>M12345678 Mediapipe Demo</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediaPipe Gesten Demo</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    width: 100%; height: 100%;
-    background: #05060f;
-    overflow: hidden;
-    font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
-    color: #fff;
+  :root{
+    --bg:#03040f; --panel:rgba(7,11,31,.86); --border:#1f2a5a;
+    --accent:#19f5c1; --muted:#7d89c9; --text:#e8ecff; --val:#ffd166;
   }
-  #stage { position: relative; width: 100vw; height: 100vh; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;overflow:hidden}
+  #particles{position:fixed;inset:0;width:100%;height:100%;display:block}
 
-  /* Particle canvas: full-screen background on top */
-  #particleCanvas {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    z-index: 2;
-    pointer-events: none;
-  }
+  h1{position:fixed;top:22px;left:0;right:0;text-align:center;pointer-events:none;
+    font-size:clamp(26px,4.2vw,62px);font-weight:900;letter-spacing:.12em;
+    background:linear-gradient(90deg,#ff7eb3,#ffb38a 50%,#ffe08a);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 18px rgba(255,170,120,.35))}
 
-  /* Live camera feed + detection overlay (picture-in-picture, bottom right) */
-  #camWrap {
-    position: absolute;
-    right: 20px; bottom: 20px;
-    width: 420px;
-    aspect-ratio: 4 / 3;
-    border: 2px solid rgba(0, 255, 220, .6);
-    border-radius: 12px;
-    overflow: hidden;
-    z-index: 5;
-    box-shadow: 0 0 24px rgba(0, 255, 220, .35);
-    background: #000;
-  }
-  #video, #overlayCanvas {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    transform: scaleX(-1);   /* mirrored for a more intuitive view */
-  }
-  #overlayCanvas { z-index: 2; }
+  .panel{position:fixed;left:24px;bottom:24px;width:min(600px,calc(100vw - 48px));
+    padding:24px 26px 18px;background:var(--panel);border:1px solid var(--border);
+    border-radius:12px;backdrop-filter:blur(6px)}
+  #clock{font-size:34px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  #date{color:#9fb0ff;font-size:20px;margin:12px 0 10px}
+  .row{font-size:18px;margin:8px 0}
+  .val{font-weight:700;color:var(--val)}
+  #handState{font-weight:700;color:#8a93b8}
+  #handState.ok{color:#1dfc8a}
+  .bar{height:9px;background:#1b2140;border-radius:6px;overflow:hidden;margin:8px 0 14px}
+  .bar>div{height:100%;width:0;border-radius:6px;transition:width .15s;
+    background:linear-gradient(90deg,#19f5c1,#4aa8ff,#7c6cff)}
+  #colorName{font-weight:700}
+  .hint{color:var(--muted);font-size:14px;margin-top:10px}
 
-  /* Title bar */
-  #titleBar {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    text-align: center;
-    padding: 14px 0 10px;
-    z-index: 10;
-    background: linear-gradient(180deg, rgba(5,6,15,.85), transparent);
-  }
-  #titleBar h1 {
-    font-size: 44px;
-    font-weight: 900;
-    letter-spacing: 6px;
-    background: linear-gradient(90deg, #00ffd0, #6a8dff, #ff6ad5, #ffd166, #00ffd0);
-    background-size: 300% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: flow 8s linear infinite;
-    text-shadow: 0 0 30px rgba(106, 141, 255, .25);
-  }
-  @keyframes flow { to { background-position: 300% 0; } }
+  .legend{position:fixed;top:120px;right:24px;padding:14px 16px;background:var(--panel);
+    border:1px solid var(--border);border-radius:12px;font-size:14px;min-width:220px}
+  .legend h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .legend li{list-style:none;display:flex;gap:10px;align-items:center;padding:4px 8px;border-radius:6px;
+    color:#b8c1ec;transition:background .2s,color .2s}
+  .legend li span:first-child{width:24px;text-align:center;font-size:18px}
+  .legend li.active{background:rgba(25,245,193,.14);color:#fff}
+  .legend li.active b{color:var(--accent)}
 
-  /* Left-side info panel */
-  #infoPanel {
-    position: absolute;
-    left: 20px; bottom: 20px;
-    z-index: 10;
-    background: rgba(10, 14, 30, .72);
-    border: 1px solid rgba(120, 160, 255, .35);
-    border-radius: 12px;
-    padding: 16px 20px;
-    min-width: 300px;
-    backdrop-filter: blur(6px);
-    line-height: 1.9;
-    font-size: 15px;
-  }
-  #infoPanel .clock { font-size: 26px; font-weight: 700; color: #00ffd0; }
-  #infoPanel .date  { font-size: 17px; color: #9fb4ff; }
-  #infoPanel .row b { color: #ffd166; }
-  #handState.open   { color: #00ff88; font-weight: 700; }
-  #handState.closed { color: #ff5f7a; font-weight: 700; }
-  #handState.none   { color: #888; }
+  #camWrap{position:fixed;right:24px;bottom:24px;width:min(520px,38vw);aspect-ratio:4/3;
+    border:2px solid var(--accent);border-radius:12px;overflow:hidden;background:#000;
+    box-shadow:0 0 24px rgba(25,245,193,.45)}
+  #cam{width:100%;height:100%;display:block;object-fit:cover}
+  #video{display:none}
+  #status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:20px;color:var(--muted);font-size:15px;background:#02030a}
 
-  .bar {
-    width: 100%; height: 8px;
-    background: rgba(255,255,255,.12);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 2px;
+  @media (max-width:900px){
+    .legend{display:none}
+    #camWrap{top:90px;bottom:auto;width:42vw}
+    .panel{padding:16px;font-size:15px}
+    #clock{font-size:26px}
+    #date{font-size:16px}
+    .row{font-size:15px}
   }
-  .bar > i {
-    display: block; height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #00ffd0, #6a8dff);
-    border-radius: 4px;
-    transition: width .12s linear;
-  }
-
-  #loading {
-    position: absolute; inset: 0;
-    z-index: 99;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 16px;
-    background: #05060f;
-    font-size: 20px; letter-spacing: 2px;
-  }
-  .spinner {
-    width: 52px; height: 52px;
-    border: 4px solid rgba(0,255,208,.2);
-    border-top-color: #00ffd0;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-<div id="stage">
-  <canvas id="particleCanvas"></canvas>
+<canvas id="particles"></canvas>
+<h1>MediaPipe Gesten Demo</h1>
 
-  <div id="titleBar"><h1>M12345678 Mediapipe Demo</h1></div>
-
-  <div id="camWrap">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="overlayCanvas"></canvas>
-  </div>
-
-  <div id="infoPanel">
-    <div class="clock" id="clock">--:--:--</div>
-    <div class="date" id="dateText">----/--/--</div>
-    <div class="row">Right Hand: <span id="handState" class="none">Not Detected</span></div>
-    <div class="row">Openness: <b id="openPct">--</b>
-      <div class="bar"><i id="openBar"></i></div>
-    </div>
-    <div class="row">Distance to Screen: <b id="distText">--</b>
-      <div class="bar"><i id="distBar"></i></div>
-    </div>
-    <div class="row">Shape: <b id="shapeText">Heart</b>&nbsp;&nbsp;Color: <b id="colorText">-</b></div>
-    <div class="row" style="font-size:13px;color:#8899bb">Fist &rarr; Open switches shape &amp; color | Moving closer shrinks the particle range</div>
-  </div>
-
-  <div id="loading">
-    <div class="spinner"></div>
-    <div id="loadingText">Loading AI models, please wait and allow camera access&hellip;</div>
-  </div>
+<div class="legend">
+  <h2>Gesten → Formen</h2>
+  <ul id="legendList"></ul>
 </div>
 
+<div class="panel">
+  <div id="clock">--:--:--</div>
+  <div id="date">&nbsp;</div>
+  <div class="row"><span id="handLabel">Hand:</span> <span id="handState">Keine Hand erkannt</span></div>
+  <div class="row">Offenheit: <span class="val" id="openVal">0%</span></div>
+  <div class="bar"><div id="openBar"></div></div>
+  <div class="row">Abstand zum Bildschirm: <span class="val" id="distVal">–</span></div>
+  <div class="bar"><div id="distBar"></div></div>
+  <div class="row">Form: <span class="val" id="shapeVal">–</span>&nbsp; Farbe: <span id="colorName">–</span></div>
+  <div class="hint">Geste wechselt Form &amp; Farbe | Hand öffnen vergrößert die Form | Näher ran verkleinert den Partikelbereich | Hand drehen dreht die Form</div>
+</div>
+
+<div id="camWrap">
+  <canvas id="cam"></canvas>
+  <div id="status">Lade MediaPipe-Modelle …</div>
+</div>
+<video id="video" playsinline muted></video>
+
 <script type="module">
-import {
-  FilesetResolver,
-  HandLandmarker,
-  PoseLandmarker
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+import { FilesetResolver, HandLandmarker, PoseLandmarker }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 
-/* ============ DOM ============ */
-const video          = document.getElementById("video");
-const overlayCanvas  = document.getElementById("overlayCanvas");
-const overlayCtx     = overlayCanvas.getContext("2d");
-const particleCanvas = document.getElementById("particleCanvas");
-const pCtx           = particleCanvas.getContext("2d");
-const loadingEl      = document.getElementById("loading");
-const loadingTextEl  = document.getElementById("loadingText");
+/* ------------------------------------------------------------------ Formen */
+const TAU = Math.PI * 2;
+function polygon(verts, t) {
+  const n = verts.length, f = t * n, i = Math.floor(f) % n, u = f - Math.floor(f);
+  const a = verts[i], b = verts[(i + 1) % n];
+  return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+}
+const regular = (n, r, rot = -Math.PI / 2) =>
+  Array.from({ length: n }, (_, i) => [Math.cos(rot + i * TAU / n) * r, Math.sin(rot + i * TAU / n) * r]);
+const starVerts = Array.from({ length: 10 }, (_, i) => {
+  const r = i % 2 ? 0.42 : 1, a = -Math.PI / 2 + i * Math.PI / 5;
+  return [Math.cos(a) * r, Math.sin(a) * r];
+});
+const triVerts = regular(3, 1.1).map(([x, y]) => [x, y + 0.2]);
+const diamondVerts = [[0, -1.05], [0.72, -0.25], [0, 1.05], [-0.72, -0.25]];
 
-const clockEl   = document.getElementById("clock");
-const dateEl    = document.getElementById("dateText");
-const handEl    = document.getElementById("handState");
-const openPctEl = document.getElementById("openPct");
-const openBarEl = document.getElementById("openBar");
-const distEl    = document.getElementById("distText");
-const distBarEl = document.getElementById("distBar");
-const shapeEl   = document.getElementById("shapeText");
-const colorEl   = document.getElementById("colorText");
+const SHAPES = {
+  heart:    t => { const a = t * TAU;
+                   const x = 16 * Math.sin(a) ** 3;
+                   const y = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a);
+                   return [x / 16, -y / 16 + 0.08]; },
+  flower:   t => { const a = t * TAU, r = 0.3 + 0.7 * Math.abs(Math.sin(2.5 * a));
+                   return [Math.cos(a) * r, Math.sin(a) * r]; },
+  star:     t => polygon(starVerts, t),
+  ring:     t => { const outer = t < 0.68, u = outer ? t / 0.68 : (t - 0.68) / 0.32, r = outer ? 0.95 : 0.45;
+                   return [Math.cos(u * TAU) * r, Math.sin(u * TAU) * r]; },
+  diamond:  t => polygon(diamondVerts, t),
+  triangle: t => polygon(triVerts, t),
+  spiral:   t => { const arms = 3, arm = Math.floor(t * arms), u = (t * arms) % 1;
+                   const r = 0.08 + u * 0.95, a = u * TAU * 1.3 + arm * TAU / arms;
+                   return [Math.cos(a) * r, Math.sin(a) * r]; },
+  infinity: t => { const a = t * TAU, d = 1 + Math.sin(a) ** 2;
+                   return [Math.cos(a) / d * 1.15, Math.sin(a) * Math.cos(a) / d * 1.3]; },
+};
 
+/* Geste -> Form + Farbverlauf (Hue-Werte) */
+const GESTURES = {
+  open:    { emoji: "🖐️", label: "Offen",       shape: "flower",   shapeName: "Blume",    color: "Blau",    hues: [190, 290] },
+  fist:    { emoji: "✊", label: "Faust",       shape: "heart",    shapeName: "Herz",     color: "Rot",     hues: [345, 20]  },
+  victory: { emoji: "✌️", label: "Victory",     shape: "star",     shapeName: "Stern",    color: "Gold",    hues: [45, 20]   },
+  point:   { emoji: "☝️", label: "Zeigefinger", shape: "ring",     shapeName: "Ringe",    color: "Türkis",  hues: [165, 200] },
+  thumb:   { emoji: "👍", label: "Daumen hoch", shape: "diamond",  shapeName: "Diamant",  color: "Eisblau", hues: [200, 230] },
+  three:   { emoji: "🤟", label: "Drei Finger", shape: "triangle", shapeName: "Dreieck",  color: "Grün",    hues: [95, 150]  },
+  rock:    { emoji: "🤘", label: "Rock",        shape: "spiral",   shapeName: "Spirale",  color: "Violett", hues: [270, 320] },
+  shaka:   { emoji: "🤙", label: "Shaka",       shape: "infinity", shapeName: "Unendlich",color: "Orange",  hues: [25, 330]  },
+};
+const IDLE_ORDER = Object.keys(GESTURES);
+
+/* Legende aufbauen */
+const legendList = document.getElementById("legendList");
+for (const [key, g] of Object.entries(GESTURES)) {
+  const li = document.createElement("li");
+  li.dataset.key = key;
+  li.innerHTML = `<span>${g.emoji}</span><span>${g.label} → <b>${g.shapeName}</b></span>`;
+  legendList.appendChild(li);
+}
+
+/* --------------------------------------------------------------- Partikel */
+const pc = document.getElementById("particles");
+const px = pc.getContext("2d");
+let W = 0, H = 0, DPR = 1;
 function resize() {
-  particleCanvas.width  = innerWidth;
-  particleCanvas.height = innerHeight;
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  pc.width = W * DPR; pc.height = H * DPR;
+  px.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
-addEventListener("resize", resize);
-resize();
+addEventListener("resize", resize); resize();
 
-/* ============ Clock ============ */
-const WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-function tickClock() {
-  const n = new Date();
-  clockEl.textContent = n.toLocaleTimeString("en-US", { hour12: false });
-  const y = n.getFullYear();
-  const m = String(n.getMonth() + 1).padStart(2, "0");
-  const d = String(n.getDate()).padStart(2, "0");
-  dateEl.textContent = `${y}-${m}-${d} ${WEEK[n.getDay()]}`;
-}
-setInterval(tickClock, 500);
-tickClock();
+const N = Math.round(Math.min(3200, Math.max(1400, (W * H) / 650)));
+const BUCKETS = 32;
+const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+const particles = Array.from({ length: N }, (_, i) => {
+  const t = (i + Math.random()) / N;
+  return {
+    t, x: W / 2 + (Math.random() - 0.5) * W, y: H / 2 + (Math.random() - 0.5) * H, vx: 0, vy: 0,
+    ox: gauss() * 0.07, oy: gauss() * 0.07, phase: Math.random() * TAU,
+    size: 0.8 + Math.random() * 1.5,
+    bucket: Math.floor((0.5 + 0.5 * Math.sin(t * TAU * 2 + Math.random() * 0.6)) * (BUCKETS - 1)),
+  };
+});
 
-/* ============ Shape definitions (return unit coordinates -1..1) ============ */
-function heartPoint(t) {
-  const x = 16 * Math.pow(Math.sin(t), 3);
-  const y = 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
-  return { x: x/17, y: -y/17 };
-}
-function starPoint(t) {
-  const spikes = 5, outer = 1, inner = 0.42;
-  const seg = (t / (Math.PI*2)) * spikes * 2;
-  const i = Math.floor(seg), frac = seg - i;
-  const r1 = (i % 2 === 0) ? outer : inner;
-  const r2 = (i % 2 === 0) ? inner : outer;
-  const a1 = (i    / (spikes*2)) * Math.PI*2 - Math.PI/2;
-  const a2 = ((i+1)/ (spikes*2)) * Math.PI*2 - Math.PI/2;
-  const x = r1*Math.cos(a1) + (r2*Math.cos(a2) - r1*Math.cos(a1))*frac;
-  const y = r1*Math.sin(a1) + (r2*Math.sin(a2) - r1*Math.sin(a1))*frac;
-  return { x, y };
-}
-function flowerPoint(t) {          // five-petal flower (rose curve)
-  const r = Math.abs(Math.cos(2.5 * t));
-  return { x: r*Math.cos(t), y: r*Math.sin(t) };
-}
-function butterflyPoint(t) {       // butterfly curve
-  const s = t * 6;                 // needs a longer parameter domain
-  const r = Math.exp(Math.sin(s)) - 2*Math.cos(4*s) + Math.pow(Math.sin((2*s - Math.PI)/24), 5);
-  return { x: r*Math.sin(s)/4, y: -r*Math.cos(s)/4 + 0.15 };
-}
-function spiralPoint(t) {          // three-turn spiral
-  const turns = 3;
-  const a = t * turns;
-  const r = t / (Math.PI*2);
-  return { x: r*Math.cos(a), y: r*Math.sin(a) };
+/* Zustand, der von der Handerkennung gesetzt wird */
+const state = {
+  gesture: "open", hand: null, openness: 0.6, nearness: 0.3, angle: 0,
+  hueA: 190, hueB: 290, lastHandTime: 0,
+};
+let smoothOpen = 0.6, smoothNear = 0.3, smoothAngle = 0, spin = 0;
+
+function hueLerp(a, b, k) {
+  let d = ((b - a + 540) % 360) - 180;
+  return (a + d * k + 360) % 360;
 }
 
-const SHAPES = [
-  { name: "Heart",     fn: heartPoint },
-  { name: "Star",      fn: starPoint },
-  { name: "Flower",    fn: flowerPoint },
-  { name: "Butterfly", fn: butterflyPoint },
-  { name: "Spiral",    fn: spiralPoint },
-];
-
-/* Distinct color pairs (primary / secondary) */
-const PALETTES = [
-  { name: "Red",     a: "#ff2d55", b: "#ff9500" },
-  { name: "Teal",    a: "#00ffa8", b: "#00ccff" },
-  { name: "Blue",    a: "#3a7bff", b: "#9d6bff" },
-  { name: "Gold",    a: "#ffd60a", b: "#ff7b00" },
-  { name: "Magenta", a: "#ff2dcb", b: "#7a5cff" },
-  { name: "White",   a: "#ffffff", b: "#9adcff" },
-];
-
-/* ============ Particle system ============ */
-const N = 4000;
-const particles = [];
-for (let i = 0; i < N; i++) {
-  particles.push({
-    x: Math.random()*innerWidth,
-    y: Math.random()*innerHeight,
-    vx: 0, vy: 0,
-    t: (i / N) * Math.PI * 2,          // shape parameter
-    jx: (Math.random()-0.5),           // random scatter direction
-    jy: (Math.random()-0.5),
-    size: 1.5 + Math.random()*2.5,
-    tw: Math.random()*Math.PI*2,       // twinkle phase
-  });
-}
-
-let shapeIdx = 0;
-let paletteIdx = 0;
-let openness = 0.5;        // 0=fist 1=fully open (smoothed)
-let rawOpenness = 0.5;
-let distScale = 1.0;       // overall scale from distance (smoothed)
-let rawDistScale = 1.0;
-let handDetected = false;
-let wasClosed = false;
-
-function applyShape() {
-  shapeEl.textContent = SHAPES[shapeIdx].name;
-  const p = PALETTES[paletteIdx];
-  colorEl.textContent = p.name;
-  colorEl.style.color = p.a;
-}
-applyShape();
-
-function drawParticles() {
-  const W = particleCanvas.width, H = particleCanvas.height;
-  pCtx.clearRect(0, 0, W, H);
-
-  // smoothing
-  openness  += (rawOpenness  - openness)  * 0.12;
-  distScale += (rawDistScale - distScale) * 0.08;
-
-  const cx = W/2, cy = H/2 + 20;
-  const baseR = Math.min(W, H) * 0.52 * distScale;
-  // shrinks to 8% on a fist, 100% + extra scatter when fully open (may fly off-screen)
-  const scale = baseR * (0.08 + 0.92 * openness);
-  const scatter = Math.max(0, openness - 0.55) * baseR * 6.0;  // bursts outward near fully open
-
-  const pal = PALETTES[paletteIdx];
-  const shapeFn = SHAPES[shapeIdx].fn;
-  const time = performance.now() / 1000;
-
-  pCtx.globalCompositeOperation = "lighter";
+function burst(power = 9) {
   for (const p of particles) {
-    const pt = shapeFn(p.t);
-    const tx = cx + pt.x * scale + p.jx * scatter;
-    const ty = cy + pt.y * scale + p.jy * scatter;
-    // spring-follow
-    p.vx = (p.vx + (tx - p.x) * 0.045) * 0.86;
-    p.vy = (p.vy + (ty - p.y) * 0.045) * 0.86;
-    p.x += p.vx;
-    p.y += p.vy;
-
-    const twinkle = 0.55 + 0.45 * Math.sin(time*3 + p.tw);
-    pCtx.globalAlpha = twinkle * (0.35 + 0.65*openness);
-    pCtx.fillStyle = (p.t % (Math.PI/2) < Math.PI/4) ? pal.a : pal.b;
-    pCtx.beginPath();
-    pCtx.arc(p.x, p.y, p.size * (0.6 + 0.6*openness), 0, Math.PI*2);
-    pCtx.fill();
+    const a = Math.random() * TAU, s = Math.random() * power;
+    p.vx += Math.cos(a) * s; p.vy += Math.sin(a) * s;
   }
-  pCtx.globalAlpha = 1;
-  pCtx.globalCompositeOperation = "source-over";
 }
 
-/* ============ MediaPipe ============ */
+function renderParticles(time) {
+  const g = GESTURES[state.gesture];
+  const shapeFn = SHAPES[g.shape];
+
+  smoothOpen += (state.openness - smoothOpen) * 0.08;
+  smoothNear += (state.nearness - smoothNear) * 0.08;
+  smoothAngle += (state.angle - smoothAngle) * 0.1;
+  state.hueA = hueLerp(state.hueA, g.hues[0], 0.05);
+  state.hueB = hueLerp(state.hueB, g.hues[1], 0.05);
+  spin += 0.0025;
+
+  const base = Math.min(W, H) * 0.2;
+  const R = base * (0.55 + 0.75 * smoothOpen) * (1 - 0.5 * smoothNear);
+  const rot = smoothAngle + spin * (state.hand ? 0.15 : 1);
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const cx = W / 2, cy = H / 2 + 10;
+  const jitter = 1.2 + smoothOpen * 1.8;
+
+  // Farb-LUT für diesen Frame
+  const lut = [];
+  for (let i = 0; i < BUCKETS; i++) {
+    const h = hueLerp(state.hueA, state.hueB, i / (BUCKETS - 1));
+    lut.push(`hsla(${h.toFixed(0)},95%,${62 + (i % 4) * 4}%,0.85)`);
+  }
+
+  // Nachleuchten
+  px.globalCompositeOperation = "source-over";
+  px.fillStyle = "rgba(3,4,15,0.28)";
+  px.fillRect(0, 0, W, H);
+
+  const paths = Array.from({ length: BUCKETS }, () => new Path2D());
+  const tm = time * 0.002;
+  for (const p of particles) {
+    let [sx, sy] = shapeFn(p.t);
+    sx += p.ox; sy += p.oy;
+    const tx = cx + (sx * cs - sy * sn) * R;
+    const ty = cy + (sx * sn + sy * cs) * R;
+    p.vx += (tx - p.x) * 0.055; p.vy += (ty - p.y) * 0.055;
+    p.vx *= 0.8; p.vy *= 0.8;
+    p.x += p.vx + Math.sin(tm + p.phase) * jitter * 0.4;
+    p.y += p.vy + Math.cos(tm * 1.3 + p.phase) * jitter * 0.4;
+    const path = paths[p.bucket];
+    path.moveTo(p.x + p.size, p.y);
+    path.arc(p.x, p.y, p.size, 0, TAU);
+  }
+  px.globalCompositeOperation = "lighter";
+  for (let i = 0; i < BUCKETS; i++) { px.fillStyle = lut[i]; px.fill(paths[i]); }
+}
+
+/* ------------------------------------------------------------- UI / Uhr */
+const $ = id => document.getElementById(id);
+const DAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+function updateClock() {
+  const d = new Date(), z = n => String(n).padStart(2, "0");
+  $("clock").textContent = `${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
+  $("date").textContent = `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${DAYS[d.getDay()]}`;
+}
+setInterval(updateClock, 1000); updateClock();
+
+let lastUiGesture = null;
+function updateUI() {
+  const g = GESTURES[state.gesture];
+  if (state.hand) {
+    $("handLabel").textContent = `${state.hand}:`;
+    $("handState").textContent = `${g.emoji} ${g.label}`;
+    $("handState").className = "ok";
+  } else {
+    $("handLabel").textContent = "Hand:";
+    $("handState").textContent = "Keine Hand erkannt";
+    $("handState").className = "";
+  }
+  $("openVal").textContent = `${Math.round(smoothOpen * 100)}%`;
+  $("openBar").style.width = `${smoothOpen * 100}%`;
+  const n = smoothNear;
+  $("distVal").textContent = state.hand ? (n > 0.66 ? "Nah" : n > 0.33 ? "Mittel" : "Fern") : "–";
+  $("distBar").style.width = `${(state.hand ? n : 0) * 100}%`;
+  $("shapeVal").textContent = g.shapeName;
+  $("colorName").textContent = g.color;
+  $("colorName").style.color = `hsl(${g.hues[0]},95%,65%)`;
+  if (lastUiGesture !== state.gesture) {
+    for (const li of legendList.children) li.classList.toggle("active", li.dataset.key === state.gesture);
+    lastUiGesture = state.gesture;
+  }
+}
+
+/* ------------------------------------------------------ Gestenerkennung */
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, (a.z - b.z) * 0.5);
+
+function fingerStates(lm) {
+  const ext = (tip, pip) => dist(lm[tip], lm[0]) > dist(lm[pip], lm[0]) * 1.12;
+  const palm = dist(lm[0], lm[9]);
+  const thumb = dist(lm[4], lm[17]) > dist(lm[3], lm[17]) * 1.08 && dist(lm[4], lm[9]) > palm * 0.55;
+  return [thumb, ext(8, 6), ext(12, 10), ext(16, 14), ext(20, 18)];
+}
+
+function classify([t, i, m, r, p]) {
+  if (i && m && r && p) return "open";
+  if (!i && !m && !r && !p) return t ? "thumb" : "fist";
+  if (i && m && r && !p) return "three";
+  if (i && m && !r && !p) return "victory";
+  if (i && !m && !r && p) return "rock";
+  if (!i && !m && !r && p) return "shaka";
+  if (i && !m && !r && !p) return "point";
+  return null;
+}
+
+let candidate = null, candidateCount = 0;
+function processHand(lm, handLabel, aspect) {
+  const palm = dist(lm[0], lm[9]);
+  // Offenheit: mittlerer Abstand Fingerspitzen <-> Handgelenk relativ zur Handflächengröße
+  const tips = [4, 8, 12, 16, 20];
+  const avg = tips.reduce((s, k) => s + dist(lm[k], lm[0]), 0) / tips.length / palm;
+  state.openness = Math.min(1, Math.max(0, (avg - 1.0) / 0.85));
+  // Nähe: wie groß erscheint die Hand im Bild?
+  const size = Math.hypot((lm[0].x - lm[9].x) * aspect, lm[0].y - lm[9].y);
+  state.nearness = Math.min(1, Math.max(0, (size - 0.1) / 0.22));
+  // Drehung der Hand (gespiegelt, damit es sich natürlich anfühlt)
+  state.angle = Math.atan2(lm[9].y - lm[0].y, -(lm[9].x - lm[0].x) * aspect) + Math.PI / 2;
+  state.hand = handLabel;
+  state.lastHandTime = performance.now();
+
+  const g = classify(fingerStates(lm));
+  if (g && g === candidate) candidateCount++;
+  else { candidate = g; candidateCount = 1; }
+  if (candidate && candidateCount >= 5 && candidate !== state.gesture) {
+    state.gesture = candidate;
+    burst();
+  }
+}
+
+/* ---------------------------------------------------------- Kamera + MP */
+const video = $("video");
+const cc = $("cam");
+const cx2 = cc.getContext("2d");
+const statusEl = $("status");
+
+const HAND_CONN = [
+  [[0,1],[1,2],[2,3],[3,4]],          // Daumen
+  [[5,6],[6,7],[7,8]],                // Zeigefinger
+  [[9,10],[10,11],[11,12]],           // Mittelfinger
+  [[13,14],[14,15],[15,16]],          // Ringfinger
+  [[17,18],[18,19],[19,20]],          // kleiner Finger
+  [[0,5],[5,9],[9,13],[13,17],[0,17]] // Handfläche
+];
+const HAND_COLORS = ["#ff6ec7", "#33d6ff", "#2dff9a", "#ffd23f", "#b388ff", "#ff5470"];
+const POSE_BODY = [[11,12,"#ffd23f"],[11,13,"#33d6ff"],[13,15,"#33d6ff"],[12,14,"#2dffc4"],[14,16,"#2dffc4"],
+                   [11,23,"#33d6ff"],[12,24,"#2dffc4"],[23,24,"#ffd23f"]];
+const POSE_FACE = [[1,2],[2,3],[4,5],[5,6],[3,7],[6,8],[9,10]];
+
 let handLandmarker, poseLandmarker;
 
 async function init() {
-  // Start the models (network download + WASM init) and the camera permission
-  // prompt at the same time instead of one after another. getUserMedia's
-  // permission dialog and device startup don't need the models to be ready,
-  // so running them in parallel noticeably cuts the time to first frame.
-  const modelsPromise = (async () => {
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-    );
-    return Promise.all([
-      HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-          delegate: "GPU"
-        },
-        runningMode: "VIDEO",
-        numHands: 2
-      }),
-      PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-          delegate: "GPU"
-        },
-        runningMode: "VIDEO",
-        numPoses: 1
-      })
+  try {
+    const fileset = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+    const make = (Cls, url, extra) => Cls.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: url, delegate: "GPU" }, runningMode: "VIDEO", ...extra });
+    [handLandmarker, poseLandmarker] = await Promise.all([
+      make(HandLandmarker,
+        "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+        { numHands: 2, minHandDetectionConfidence: 0.6, minTrackingConfidence: 0.5 }),
+      make(PoseLandmarker,
+        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+        { numPoses: 1 }),
     ]);
-  })();
-
-  const cameraPromise = navigator.mediaDevices.getUserMedia({
-    video: { width: 640, height: 480 }, audio: false
-  });
-
-  const [[hl, pl], stream] = await Promise.all([modelsPromise, cameraPromise]);
-  handLandmarker = hl;
-  poseLandmarker = pl;
-
-  video.srcObject = stream;
-  await new Promise(r => video.onloadeddata = r);
-  overlayCanvas.width  = video.videoWidth;
-  overlayCanvas.height = video.videoHeight;
-
-  loadingEl.style.display = "none";
-  requestAnimationFrame(loop);
-}
-
-function dist2D(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-
-/* ============ Neon-style skeleton drawing ============ */
-function px(lm) {
-  return { x: lm.x * overlayCanvas.width, y: lm.y * overlayCanvas.height };
-}
-
-/* Glowing line: outer halo + inner bright core */
-function glowLine(ctx, a, b, color, width) {
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 14;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(255,255,255,.85)";
-  ctx.lineWidth = Math.max(1, width * 0.35);
-  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-  ctx.restore();
-}
-
-/* Glowing joint dot: halo circle + white bright core */
-function glowDot(ctx, p, color, r) {
-  const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.6);
-  g.addColorStop(0, color);
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(p.x, p.y, r * 2.6, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.55, 0, Math.PI * 2); ctx.fill();
-}
-
-/* Body skeleton: colored by body part (torso gold, arms cyan, legs purple, face pink) */
-const POSE_COLOR_OF = i =>
-  i <= 10 ? "#ff8fd8" :                       // face
-  (i === 11 || i === 12 || i === 23 || i === 24) ? "#ffd166" : // torso endpoints
-  (i <= 22) ? "#00e5ff" :                     // arms/hands
-  "#b388ff";                                  // legs/feet
-
-function drawPoseGlow(lm) {
-  const ctx = overlayCtx;
-  for (const c of PoseLandmarker.POSE_CONNECTIONS) {
-    const a = lm[c.start], b = lm[c.end];
-    if (a.visibility < 0.5 || b.visibility < 0.5) continue;
-    const pa = px(a), pb = px(b);
-    // gradient between the two endpoint colors
-    const grad = ctx.createLinearGradient(pa.x, pa.y, pb.x, pb.y);
-    grad.addColorStop(0, POSE_COLOR_OF(c.start));
-    grad.addColorStop(1, POSE_COLOR_OF(c.end));
-    glowLine(ctx, pa, pb, POSE_COLOR_OF(c.end), 4);
-    ctx.save();
-    ctx.strokeStyle = grad; ctx.lineWidth = 4; ctx.lineCap = "round";
-    ctx.globalAlpha = 0.7;
-    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
-    ctx.restore();
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "MediaPipe konnte nicht geladen werden. Internetverbindung prüfen.";
+    return;
   }
-  for (let i = 0; i < lm.length; i++) {
-    if (i > 10 && lm[i].visibility < 0.5) continue;
-    if (i > 0 && i <= 10) continue;           // only keep the nose tip on the face, to avoid clutter
-    glowDot(overlayCtx, px(lm[i]), POSE_COLOR_OF(i), i === 0 ? 6 : 4.5);
+  statusEl.textContent = "Bitte Kamerazugriff erlauben …";
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    cc.width = video.videoWidth; cc.height = video.videoHeight;
+    statusEl.remove();
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "Kein Kamerazugriff. Seite über http://localhost oder https öffnen und Kamera erlauben.";
   }
 }
 
-/* Hands: each finger its own color, right hand in bright colors, left hand gray-blue */
-const FINGER_COLORS = ["#ff5f7a", "#ffd166", "#06f7a1", "#4cc9f0", "#c77dff"];
-function fingerOf(i) {
-  if (i >= 1  && i <= 4)  return 0;   // thumb
-  if (i >= 5  && i <= 8)  return 1;   // index
-  if (i >= 9  && i <= 12) return 2;   // middle
-  if (i >= 13 && i <= 16) return 3;   // ring
-  if (i >= 17 && i <= 20) return 4;   // pinky
-  return -1;                          // wrist/palm
-}
-
-function drawHandGlow(lm, isRight) {
-  const ctx = overlayCtx;
-  for (const c of HandLandmarker.HAND_CONNECTIONS) {
-    const f = Math.max(fingerOf(c.start), fingerOf(c.end));
-    const color = !isRight ? "#7a8ba8"
-      : (f >= 0 ? FINGER_COLORS[f] : "#ffffff");
-    glowLine(ctx, px(lm[c.start]), px(lm[c.end]), color, isRight ? 4 : 3);
-  }
-  for (let i = 0; i < lm.length; i++) {
-    const f = fingerOf(i);
-    const color = !isRight ? "#9fb0c8"
-      : (f >= 0 ? FINGER_COLORS[f] : "#ffffff");
-    // enlarge fingertip dots so they stand out
-    const tip = (i === 4 || i === 8 || i === 12 || i === 16 || i === 20);
-    glowDot(ctx, px(lm[i]), color, tip ? 6 : 4);
-  }
-  if (isRight) {
-    // right-hand label
-    const w = px(lm[0]);
-    ctx.save();
-    ctx.font = "bold 16px 'Microsoft JhengHei', sans-serif";
-    ctx.shadowColor = "#00ff88"; ctx.shadowBlur = 10;
-    ctx.fillStyle = "#00ff88";
-    ctx.scale(-1, 1);   // cancel out the CSS mirror so the text isn't reversed
-    ctx.fillText("Control Hand R", -w.x - 120, w.y + 28);
-    ctx.restore();
-  }
-}
-
-/* Openness of the hand: average fingertip-to-wrist distance / palm reference length */
-function computeOpenness(lm) {
-  const wrist = lm[0];
-  const palmLen = dist2D(wrist, lm[9]) || 1e-6;   // wrist -> middle finger base
-  const tips = [4, 8, 12, 16, 20];
-  let sum = 0;
-  for (const i of tips) sum += dist2D(wrist, lm[i]);
-  const ratio = (sum / tips.length) / palmLen;
-  // ~0.9 for a fist, ~1.9 fully open -> mapped to 0..1
-  return Math.min(1, Math.max(0, (ratio - 1.0) / 0.85));
-}
-
-let lastVideoTime = -1;
-
-function loop() {
-  requestAnimationFrame(loop);
-  if (video.currentTime === lastVideoTime) { drawParticles(); return; }
+let lastVideoTime = -1, frame = 0, lastPose = null, lastHands = null;
+function detect(now) {
+  if (!handLandmarker || video.readyState < 2 || video.currentTime === lastVideoTime) return;
   lastVideoTime = video.currentTime;
-  const nowMs = performance.now();
+  frame++;
+  lastHands = handLandmarker.detectForVideo(video, now);
+  if (frame % 2 === 0) lastPose = poseLandmarker.detectForVideo(video, now);
 
-  const handRes = handLandmarker.detectForVideo(video, nowMs);
-  const poseRes = poseLandmarker.detectForVideo(video, nowMs);
-
-  /* --- draw detection results on top of the camera feed --- */
-  overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-  if (poseRes.landmarks) {
-    for (const lm of poseRes.landmarks) drawPoseGlow(lm);
+  const aspect = video.videoWidth / video.videoHeight;
+  const hands = lastHands.landmarks || [];
+  if (hands.length) {
+    // Kamera liefert ungespiegelte Bilder, MediaPipe erwartet Selfie-Spiegelung -> Seiten tauschen
+    const labels = lastHands.handednesses.map(h => h[0].categoryName === "Left" ? "Rechte Hand" : "Linke Hand");
+    let idx = labels.indexOf("Rechte Hand");
+    if (idx < 0) idx = 0;
+    processHand(hands[idx], labels[idx], aspect);
   }
-
-  /* --- find the right hand (the image isn't mirrored, so the user's right hand is labeled "Left") --- */
-  let rightHand = null;
-  if (handRes.landmarks && handRes.landmarks.length) {
-    for (let i = 0; i < handRes.landmarks.length; i++) {
-      const label = handRes.handednesses?.[i]?.[0]?.categoryName;
-      const isRight = (label === "Left");
-      drawHandGlow(handRes.landmarks[i], isRight);
-      if (isRight) rightHand = handRes.landmarks[i];
-    }
-    // if only one hand is seen and it wasn't labeled right, use it anyway to avoid flicker at the detection boundary
-    if (!rightHand && handRes.landmarks.length === 1) rightHand = handRes.landmarks[0];
-  }
-
-  if (rightHand) {
-    handDetected = true;
-    rawOpenness = computeOpenness(rightHand);
-
-    /* distance estimate: the larger the hand appears, the closer to the camera -> smaller particle range */
-    const handSize = dist2D(rightHand[0], rightHand[9]);   // 0.04(far) ~ 0.30(near)
-    const near = Math.min(1, Math.max(0, (handSize - 0.05) / 0.22)); // 0=far 1=near
-    rawDistScale = 1.6 - near * 1.3;   // far: 1.6x -> near: 0.3x
-
-    /* fist -> open transition: switch shape + color */
-    const isClosed = rawOpenness < 0.25;
-    const isOpen   = rawOpenness > 0.65;
-    if (isClosed) wasClosed = true;
-    if (wasClosed && isOpen) {
-      wasClosed = false;
-      shapeIdx   = (shapeIdx + 1) % SHAPES.length;
-      paletteIdx = (paletteIdx + 1) % PALETTES.length;
-      applyShape();
-    }
-
-    /* update the info panel */
-    if (isClosed) {
-      handEl.textContent = "✊ Fist";
-      handEl.className = "closed";
-    } else if (isOpen) {
-      handEl.textContent = "🖐 Open";
-      handEl.className = "open";
-    } else {
-      handEl.textContent = "🤏 Half Open";
-      handEl.className = "open";
-    }
-    openPctEl.textContent = Math.round(rawOpenness*100) + "%";
-    openBarEl.style.width = (rawOpenness*100) + "%";
-    distEl.textContent = near > 0.66 ? "Near" : near > 0.33 ? "Mid" : "Far";
-    distBarEl.style.width = (near*100) + "%";
-  } else {
-    handDetected = false;
-    handEl.textContent = "Not Detected";
-    handEl.className = "none";
-  }
-
-  drawParticles();
 }
 
-init().catch(err => {
-  loadingEl.innerHTML = `<div style="color:#ff5f7a;max-width:600px;text-align:center;line-height:1.8">
-    Initialization failed: ${err.message}<br>
-    Please make sure camera access is allowed, and open this page via http(s) or localhost (file:// cannot access the camera).
-  </div>`;
-  console.error(err);
-});
+function drawCam() {
+  if (!cc.width) return;
+  const w = cc.width, h = cc.height;
+  cx2.save();
+  cx2.translate(w, 0); cx2.scale(-1, 1);
+  cx2.drawImage(video, 0, 0, w, h);
+  cx2.restore();
+  const P = l => [(1 - l.x) * w, l.y * h];
+  const lw = Math.max(2, w / 260);
+
+  const line = (a, b, color) => {
+    cx2.strokeStyle = color; cx2.shadowColor = color; cx2.shadowBlur = 10;
+    cx2.beginPath(); cx2.moveTo(...P(a)); cx2.lineTo(...P(b)); cx2.stroke();
+  };
+  cx2.lineWidth = lw; cx2.lineCap = "round";
+
+  // Körper + Gesicht
+  const pose = lastPose?.landmarks?.[0];
+  if (pose) {
+    for (const [a, b, c] of POSE_BODY)
+      if (pose[a].visibility > 0.5 && pose[b].visibility > 0.5) line(pose[a], pose[b], c);
+    for (const [a, b] of POSE_FACE) line(pose[a], pose[b], "#ff4fd8");
+    cx2.fillStyle = "#ff4fd8";
+    cx2.beginPath(); cx2.arc(...P(pose[0]), lw * 2.2, 0, TAU); cx2.fill();
+  }
+
+  // Hände
+  const hands = lastHands?.landmarks || [];
+  hands.forEach((lm, hi) => {
+    HAND_CONN.forEach((group, gi) => group.forEach(([a, b]) => line(lm[a], lm[b], HAND_COLORS[gi])));
+    cx2.shadowBlur = 8;
+    lm.forEach((p, i) => {
+      const gi = i === 0 ? 5 : Math.min(4, Math.floor((i - 1) / 4));
+      cx2.fillStyle = "#fff"; cx2.shadowColor = HAND_COLORS[gi];
+      cx2.beginPath(); cx2.arc(...P(p), lw * 1.6, 0, TAU); cx2.fill();
+    });
+    const lab = lastHands.handednesses[hi][0].categoryName === "Left" ? "Hand R" : "Hand L";
+    const [x, y] = P(lm[0]);
+    cx2.shadowBlur = 0; cx2.fillStyle = "#2dff9a";
+    cx2.font = `bold ${Math.round(w / 40)}px Segoe UI, sans-serif`;
+    cx2.fillText(lab, x - w / 30, y + h / 20);
+  });
+  cx2.shadowBlur = 0;
+}
+
+/* ------------------------------------------------------------- Loop */
+let idleTimer = 0, idleIdx = 0, uiTick = 0;
+function loop(now) {
+  detect(now);
+
+  // ohne Hand: Formen automatisch durchwechseln
+  if (now - state.lastHandTime > 800) {
+    if (state.hand) { state.hand = null; state.openness = 0.6; state.nearness = 0.3; state.angle = 0; }
+    if (now - idleTimer > 4000) {
+      idleTimer = now;
+      idleIdx = (idleIdx + 1) % IDLE_ORDER.length;
+      state.gesture = IDLE_ORDER[idleIdx];
+      burst(5);
+    }
+  } else idleTimer = now;
+
+  renderParticles(now);
+  drawCam();
+  if (++uiTick % 4 === 0) updateUI();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+init();
 </script>
 </body>
 </html>
