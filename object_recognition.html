@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Object Recognizer</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --text:#1d2330; --muted:#6b7280; --accent:#2563eb; --bar:#e5e7eb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111418; --card:#1b2028; --text:#e8ebf0; --muted:#9aa3af; --accent:#60a5fa; --bar:#2b323d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  p.sub { margin: 0 0 20px; color: var(--muted); }
+  .card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:16px; }
+  .buttons { display:flex; gap:10px; flex-wrap:wrap; }
+  button, label.btn { font: inherit; border:0; border-radius:10px; padding:10px 16px; cursor:pointer;
+    background:var(--accent); color:#fff; display:inline-block; }
+  button.secondary, label.btn { background:var(--bar); color:var(--text); }
+  button:disabled { opacity:.5; cursor:default; }
+  input[type=file] { display:none; }
+  .stage { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; margin-top:16px; }
+  #view { width:224px; height:224px; border-radius:12px; background:var(--bar); overflow:hidden;
+    display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:.9rem; }
+  #view canvas, #view img { width:224px; height:224px; object-fit:cover; display:block; }
+  .results { flex:1; min-width:240px; }
+  .top { font-size:1.5rem; font-weight:700; margin-bottom:12px; }
+  .row { margin-bottom:10px; }
+  .row .lbl { display:flex; justify-content:space-between; font-size:.95rem; margin-bottom:4px; }
+  .track { height:12px; background:var(--bar); border-radius:6px; overflow:hidden; }
+  .fill { height:100%; background:var(--accent); width:0; transition:width .15s; }
+  #status { color:var(--muted); font-size:.9rem; margin-top:10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Object Recognizer</h1>
+  <p class="sub">Uses your Teachable Machine model to recognize objects from the webcam or an image.</p>
+
+  <div class="card">
+    <div class="buttons">
+      <button id="camBtn" disabled>Start webcam</button>
+      <label class="btn" id="fileLbl">Upload image <input type="file" id="fileInput" accept="image/*"></label>
+    </div>
+    <div class="stage">
+      <div id="view">No input yet</div>
+      <div class="results">
+        <div class="top" id="top">–</div>
+        <div id="bars"></div>
+      </div>
+    </div>
+    <div id="status">Loading model…</div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.5/dist/teachablemachine-image.min.js"></script>
+<script>
+  // Your Teachable Machine model
+  const MODEL_URL = "https://teachablemachine.withgoogle.com/models/usK9kxJyb/";
+
+  let model, webcam, running = false, maxPredictions = 0;
+  const $ = id => document.getElementById(id);
+  const view = $("view"), bars = $("bars"), topEl = $("top"), statusEl = $("status"), camBtn = $("camBtn");
+
+  async function init() {
+    try {
+      model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+      maxPredictions = model.getTotalClasses();
+      bars.innerHTML = model.getClassLabels().map((l, i) => `
+        <div class="row">
+          <div class="lbl"><span>${l}</span><span id="pct${i}">0%</span></div>
+          <div class="track"><div class="fill" id="fill${i}"></div></div>
+        </div>`).join("");
+      statusEl.textContent = "Model loaded. Classes: " + model.getClassLabels().join(", ");
+      camBtn.disabled = false;
+    } catch (e) {
+      statusEl.textContent = "Could not load model: " + e.message;
+    }
+  }
+
+  function show(predictions) {
+    let best = predictions[0];
+    predictions.forEach((p, i) => {
+      const pct = Math.round(p.probability * 100);
+      $("pct" + i).textContent = pct + "%";
+      $("fill" + i).style.width = pct + "%";
+      if (p.probability > best.probability) best = p;
+    });
+    topEl.textContent = best.probability > 0.6
+      ? `${best.className} (${Math.round(best.probability * 100)}%)`
+      : "Not sure…";
+  }
+
+  async function loop() {
+    if (!running) return;
+    webcam.update();
+    show(await model.predict(webcam.canvas));
+    requestAnimationFrame(loop);
+  }
+
+  camBtn.onclick = async () => {
+    if (running) {               // stop
+      running = false;
+      webcam.stop();
+      camBtn.textContent = "Start webcam";
+      return;
+    }
+    try {
+      webcam = new tmImage.Webcam(224, 224, true); // width, height, flip
+      await webcam.setup();
+      await webcam.play();
+      view.innerHTML = "";
+      view.appendChild(webcam.canvas);
+      running = true;
+      camBtn.textContent = "Stop webcam";
+      statusEl.textContent = "Webcam running.";
+      loop();
+    } catch (e) {
+      statusEl.textContent = "Webcam error: " + e.message;
+    }
+  };
+
+  $("fileInput").onchange = async e => {
+    const file = e.target.files[0];
+    if (!file || !model) return;
+    if (running) camBtn.onclick();
+    const img = new Image();
+    img.onload = async () => {
+      view.innerHTML = "";
+      view.appendChild(img);
+      show(await model.predict(img));
+      statusEl.textContent = "Predicted: " + file.name;
+    };
+    img.src = URL.createObjectURL(file);
+  };
+
+  init();
+</script>
+</body>
+</html>
