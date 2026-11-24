@@ -1,2 +1,2 @@
 Extra Credit Challenge
-https://324450.github.io/mediapipeCC.html
+https://324450.github.io/object_recognition.html
